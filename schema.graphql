@@ -1,3 +1,5 @@
+# type ConstructorGraphEntity @entity { }
+
 type Factory @entity {
     id: ID!
     vaultCount: Int!
