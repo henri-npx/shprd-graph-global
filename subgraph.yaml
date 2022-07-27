@@ -1,0 +1,65 @@
+specVersion: 0.0.4
+description: Shepherd is a decentralised, community-owned asset management
+  platform, for this graph, on Avalanche
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: Factory
+    network: avalanche
+    source:
+      abi: Factory
+      address: "0xff65f4491bC7C0676E96471Bfff84205561940Be"
+      startBlock: 16620000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      file: ./src/mappings/factory.ts
+      entities:
+        - Vault
+      abis:
+        - name: Factory
+          file: ./abis/Factory.json
+        - name: Vault
+          file: ./abis/Vault.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: VaultCreated(address,address,address[])
+          handler: handleCreateVault
+      blockHandlers:
+        - handler: handleNewBlock
+templates:
+  - kind: ethereum/contract
+    name: Vault
+    network: avalanche
+    source:
+      abi: Vault
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      file: ./src/mappings/vault.ts
+      entities:
+        - Vault
+      abis:
+        - name: Vault
+          file: ./abis/Vault.json
+        - name: Factory
+          file: ./abis/Factory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Deposit(uint256,uint256)
+          handler: handleDeposit
+        - event: HarvestManagementFees(uint256,uint256)
+          handler: handleHarvestManagementFees
+        - event: HarvestPerformanceFees(uint256,uint256)
+          handler: handleHarvestPerformanceFees
+        - event: Rebalance(uint256[],uint256[])
+          handler: handleRebalance
+        - event: Redeem(uint256,uint256)
+          handler: handleRedeem
+        - event: AddAsset(address)
+          handler: handleAddAsset

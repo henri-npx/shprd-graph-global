@@ -1,0 +1,100 @@
+type Factory @entity {
+    id: ID!
+    vaultCount: Int!
+    vaults: [Vault!]! @derivedFrom(field: "factory")
+}
+
+type Vault @entity {
+    id: ID!
+    factory: Factory!
+    vault: Bytes! # address
+    creator: Bytes! # address
+    share: Bytes! # address
+    tokens: [Bytes!]! # address[]
+    accManagementFeesToDAO: BigInt!
+    accPerformanceFeesToDAO: BigInt!
+    accManagementFeesToStrategists: BigInt!
+    accPerformanceFeesToStrategists: BigInt!
+
+    deposits: [Deposit!]! @derivedFrom(field: "vault")
+    rebalances: [Rebalance!]! @derivedFrom(field: "vault")
+    redemptions: [Redeem!]! @derivedFrom(field: "vault")
+
+    depositsCount: Int!
+    rebalancesCount: Int!
+    redemptionsCount: Int!
+
+    managementFeesHarvests: [HarvestManagementFees!]! @derivedFrom(field: "vault")
+    performanceFeesHarvests: [HarvestPerformanceFees!]! @derivedFrom(field: "vault")
+
+    snapshots: [VaultSnapshot!]! @derivedFrom(field: "vault")
+}
+
+type VaultSnapshot @entity {
+    id: ID!
+    factory: Factory!
+    vault: Vault!
+
+    pendingPerfFees: BigInt!
+    pendingMngFees: BigInt!
+
+    timestamp: BigInt!
+    triggeredByEvent: Boolean!
+
+    positions: [BigInt!]!
+    sharePrice: BigInt!
+    tvl: BigInt!
+
+    assetsPrices: [BigInt!]! # USD-Priced
+    assetsBalances: [BigInt!]!
+    tokens: [Bytes!]! # address[]
+}
+
+type Deposit @entity {
+    id: ID!
+    vault: Vault!
+    from: Bytes!
+    baseTokenAmountIn: BigInt!
+    sharesMinted: BigInt!
+    timestamp: BigInt!
+    sharePriceAfter: BigInt!
+}
+
+type Redeem @entity {
+    id: ID!
+    vault: Vault!
+    from: Bytes!
+    shareBurned: BigInt!
+    amountReceived: BigInt!
+    timestamp: BigInt!
+    sharePriceAfter: BigInt!
+}
+
+type Rebalance @entity {
+    id: ID!
+    vault: Vault!
+    from: Bytes!
+    desiredSignals: [BigInt!]! # Desired
+    currentSignals: [BigInt!]! # Observed
+    recordedSignals: [BigInt!]! # Queried in TG
+    timestamp: BigInt!
+    sharePriceAfter: BigInt!
+}
+
+type HarvestManagementFees @entity {
+    id: ID!
+    vault: Vault!
+    from: Bytes!
+    amountToDAO: BigInt!
+    amountToStrategist: BigInt!
+    timestamp: BigInt!
+}
+
+type HarvestPerformanceFees @entity {
+    id: ID!
+    vault: Vault!
+    from: Bytes!
+    amountToDAO: BigInt!
+    amountToStrategist: BigInt!
+    timestamp: BigInt!
+}

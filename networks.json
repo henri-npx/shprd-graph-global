@@ -1,0 +1,15 @@
+{
+  "avalanche": {
+    "Factory": {
+      "address": "0xff65f4491bC7C0676E96471Bfff84205561940Be",
+      "startBlock": 16620000
+
+    }
+  },
+  "matic": {
+    "Factory": {
+      "address": "0xc04eD88c05FcDe0f94305598eB14F1624b091A5c",
+      "startBlock": 31154723
+    }
+  }
+}
