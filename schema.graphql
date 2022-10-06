@@ -1,102 +1,187 @@
-# type ConstructorGraphEntity @entity { }
-
 type Factory @entity {
-    id: ID!
-    vaultCount: Int!
-    vaults: [Vault!]! @derivedFrom(field: "factory")
+	id: ID!
+	vaultCount: Int!
+	vaults: [Vault!]! @derivedFrom(field: "factory")
+
+	tokens: [Bytes!]!
+	feesManager: Bytes!
+	accessManager: Bytes!
+	harvester: Bytes!
+	swapRouter: Bytes!
+	swapProxy: Bytes!
+	swapAdapter: Bytes!
+}
+
+type FactoryState @entity {
+	id: ID!
 }
 
 type Vault @entity {
-    id: ID!
-    factory: Factory!
-    vault: Bytes! # address
-    creator: Bytes! # address
-    share: Bytes! # address
-    tokens: [Bytes!]! # address[]
-    accManagementFeesToDAO: BigInt!
-    accPerformanceFeesToDAO: BigInt!
-    accManagementFeesToStrategists: BigInt!
-    accPerformanceFeesToStrategists: BigInt!
+	id: ID!
+	factory: Factory!
+	vault: Bytes! # address
+	creator: Bytes! # address
+	share: Bytes! # address
+	tokens: [Bytes!]! # address[]
+	accManagementFeesToDAO: BigInt!
+	accPerformanceFeesToDAO: BigInt!
+	accManagementFeesToStrategists: BigInt!
+	accPerformanceFeesToStrategists: BigInt!
 
-    deposits: [Deposit!]! @derivedFrom(field: "vault")
-    rebalances: [Rebalance!]! @derivedFrom(field: "vault")
-    redemptions: [Redeem!]! @derivedFrom(field: "vault")
+	deposits: [Deposit!]! @derivedFrom(field: "vault")
+	rebalances: [Rebalance!]! @derivedFrom(field: "vault")
+	redemptions: [Redeem!]! @derivedFrom(field: "vault")
 
-    depositsCount: Int!
-    rebalancesCount: Int!
-    redemptionsCount: Int!
+	depositsCount: Int!
+	rebalancesCount: Int!
+	redemptionsCount: Int!
 
-    managementFeesHarvests: [HarvestManagementFees!]! @derivedFrom(field: "vault")
-    performanceFeesHarvests: [HarvestPerformanceFees!]! @derivedFrom(field: "vault")
+	managementFeesHarvests: [HarvestManagementFees!]! @derivedFrom(field: "vault")
+	performanceFeesHarvests: [HarvestPerformanceFees!]! @derivedFrom(field: "vault")
 
-    snapshots: [VaultSnapshot!]! @derivedFrom(field: "vault")
+	snapshots: [VaultSnapshot!]! @derivedFrom(field: "vault")
+
+	# RoLes
+	# TODO: Do we need to know the keccak256 of the role ?
+	admins: [Bytes!]! # address[]
+	strategists: [Bytes!]! # address[]
+	harvesters: [Bytes!]! # address[]
+	# Struct State
+	tokens: [Bytes!]!
+
+	constantProps: VaultConstantProps!
+	configProps: VaultConfigProps!
+	securityProps: VaultSecurityProps!
+	feesProps: VaultFeesProps!
+	historyProps: VaultHistoryProps!
+	balances: [BigInt!]!
+	positions: [BigInt!]!
+	tvl: BigInt!
+	sharePrice: BigInt!
+	# Fees - In shares
+	ongoingPerformanceFees: BigInt!
+	ongoingManagementFees: BigInt!
+}
+
+type VaultTokens @entity {
+	id: ID!
+	tokenAddress: Bytes! # address
+	priceFeedAddress: Bytes!
+	priceFeedPrecision: Int!
+	denominator: BigInt!
+}
+
+type VaultConstantProps @entity {
+	id: ID!
+	factory: Bytes!
+	createdAt: BigInt!
+	share: Bytes!
+}
+
+type VaultHistoryProps @entity {
+	id: ID!
+	highWaterMark: BigInt!
+	prevRebalanceSignals: [BigInt!]!
+	prevSwap: BigInt!
+	prevMngHarvest: BigInt!
+}
+
+type VaultConfigProps @entity {
+	id: ID!
+	paused: Boolean!
+	verified: Int!
+	name: Bytes!
+	description: Bytes!
+}
+
+# End of Added Section
+
+type VaultFeesProps @entity {
+	id: ID!
+	beneficiary: Bytes!
+	exitFees: BigInt
+	managementFeesRate: BigInt
+	managementFeesToStrategist: BigInt
+	performanceFeesRate: BigInt
+	performanceFeesToStrategist: BigInt
+}
+
+type VaultSecurityProps @entity {
+	id: ID!
+	maxAUM: BigInt!
+	maxLossSwap: BigInt!
+	minAmountDeposit: BigInt!
+	maxAmountDeposit: BigInt!
+	minFrequencySwap: BigInt!
+	minSecurityTime: BigInt!
+	minHarvestThreshold: BigInt!
 }
 
 type VaultSnapshot @entity {
-    id: ID!
-    factory: Factory!
-    vault: Vault!
+	id: ID!
+	factory: Factory!
+	vault: Vault!
 
-    pendingPerfFees: BigInt!
-    pendingMngFees: BigInt!
+	pendingPerfFees: BigInt!
+	pendingMngFees: BigInt!
 
-    timestamp: BigInt!
-    triggeredByEvent: Boolean!
+	timestamp: BigInt!
+	triggeredByEvent: Boolean!
 
-    positions: [BigInt!]!
-    sharePrice: BigInt!
-    tvl: BigInt!
+	positions: [BigInt!]!
+	sharePrice: BigInt!
+	tvl: BigInt!
 
-    assetsPrices: [BigInt!]! # USD-Priced
-    assetsBalances: [BigInt!]!
-    tokens: [Bytes!]! # address[]
+	assetsPrices: [BigInt!]! # USD-Priced
+	assetsBalances: [BigInt!]!
+	tokens: [Bytes!]! # address[]
 }
 
 type Deposit @entity {
-    id: ID!
-    vault: Vault!
-    from: Bytes!
-    baseTokenAmountIn: BigInt!
-    sharesMinted: BigInt!
-    timestamp: BigInt!
-    sharePriceAfter: BigInt!
+	id: ID!
+	vault: Vault!
+	from: Bytes!
+	baseTokenAmountIn: BigInt!
+	sharesMinted: BigInt!
+	timestamp: BigInt!
+	sharePriceAfter: BigInt!
 }
 
 type Redeem @entity {
-    id: ID!
-    vault: Vault!
-    from: Bytes!
-    shareBurned: BigInt!
-    amountReceived: BigInt!
-    timestamp: BigInt!
-    sharePriceAfter: BigInt!
+	id: ID!
+	vault: Vault!
+	from: Bytes!
+	shareBurned: BigInt!
+	amountReceived: BigInt!
+	timestamp: BigInt!
+	sharePriceAfter: BigInt!
 }
 
 type Rebalance @entity {
-    id: ID!
-    vault: Vault!
-    from: Bytes!
-    desiredSignals: [BigInt!]! # Desired
-    currentSignals: [BigInt!]! # Observed
-    recordedSignals: [BigInt!]! # Queried in TG
-    timestamp: BigInt!
-    sharePriceAfter: BigInt!
+	id: ID!
+	vault: Vault!
+	from: Bytes!
+	desiredSignals: [BigInt!]! # Desired
+	currentSignals: [BigInt!]! # Observed
+	recordedSignals: [BigInt!]! # Queried in TG
+	timestamp: BigInt!
+	sharePriceAfter: BigInt!
 }
 
 type HarvestManagementFees @entity {
-    id: ID!
-    vault: Vault!
-    from: Bytes!
-    amountToDAO: BigInt!
-    amountToStrategist: BigInt!
-    timestamp: BigInt!
+	id: ID!
+	vault: Vault!
+	from: Bytes!
+	amountToDAO: BigInt!
+	amountToStrategist: BigInt!
+	timestamp: BigInt!
 }
 
 type HarvestPerformanceFees @entity {
-    id: ID!
-    vault: Vault!
-    from: Bytes!
-    amountToDAO: BigInt!
-    amountToStrategist: BigInt!
-    timestamp: BigInt!
+	id: ID!
+	vault: Vault!
+	from: Bytes!
+	amountToDAO: BigInt!
+	amountToStrategist: BigInt!
+	timestamp: BigInt!
 }

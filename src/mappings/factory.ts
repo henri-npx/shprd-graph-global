@@ -1,61 +1,96 @@
-import { ByteArray, log, DataSourceTemplate, DataSourceContext, ethereum, Bytes } from "@graphprotocol/graph-ts";
-import { BigInt, BigDecimal, store, Address } from "@graphprotocol/graph-ts";
-
+import { ethereum, Bytes } from "@graphprotocol/graph-ts";
+import { BigInt, Address } from "@graphprotocol/graph-ts";
 import { VaultCreated, Factory as FactoryContract } from "../types/Factory/Factory";
-
-import { Vault, Factory } from "../types/schema";
-
+import { Vault, Factory, FactoryState } from '../types/schema';
 import { Vault as VaultContract } from "../types/Factory/Vault";
-
 import { Vault as VaultTemplate } from "../types/templates";
-
 import { FACTORY_ADDRESS, ZERO_BI } from "./helpers";
-
 import { VaultSnapshot } from "../types/schema";
 
-export function handleCreateVault(event: VaultCreated): void {
-  let factory = Factory.load(FACTORY_ADDRESS);
-  if (factory === null) {
-    factory = new Factory(FACTORY_ADDRESS);
-    factory.vaultCount = 0;
-  }
-  factory.vaultCount = factory.vaultCount + 1;
+
+export function _createFactory(event: VaultCreated): Factory {
+  const factory = new Factory(FACTORY_ADDRESS);
+  factory.vaultCount = 0;
+  const bindedFactory = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS));
+  // Tokens
+  const tokens = bindedFactory.getWhitelistedTokens();
+  const tokensArray = new Array<Bytes>(tokens.length);
+  for (let x = 0; x < tokens.length; x++) tokensArray[x] = tokens[x];
+  factory.tokens = tokensArray;
+  // Other Addresses
+  factory.feesManager = bindedFactory.feesManager();
+  factory.accessManager = bindedFactory.accessManager();
+  factory.harvester = bindedFactory.harvester();
+  factory.swapRouter = bindedFactory.swapRouter();
+  factory.swapProxy = bindedFactory.swapProxy();
+  factory.swapAdapter = bindedFactory.swapAdapter();
   factory.save();
+  return factory;
+}
 
-  // log.info("handleCreateVault ! 1", []);
-
+export function _createVault(event: VaultCreated, factory: Factory): Vault {
+  /// Factory Info
+  const bindedFactory = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS));
+  const bindedVault = VaultContract.bind(event.params.vault);
+  /// Vault
   let vault = new Vault(event.params.vault.toHexString()) as Vault;
   vault.factory = factory.id;
   vault.vault = event.params.vault;
   vault.creator = event.transaction.from;
   vault.share = event.params.share;
-
-  // log.info("handleCreateVault ! 2", []);
-
   const size = event.params.tokens.length;
-  const tmp = new Array<Bytes>(size); // https://medium.com/protofire-blog/subgraph-development-part-2-handling-arrays-and-identifying-entities-30d63d4b1dc6
+  /// https://medium.com/protofire-blog/subgraph-development-part-2-handling-arrays-and-identifying-entities-30d63d4b1dc6
+  const tmp = new Array<Bytes>(size);
   for (let x = 0; x < size; x++) tmp[x] = event.params.tokens[x];
   vault.tokens = tmp;
-
   vault.accManagementFeesToDAO = ZERO_BI;
   vault.accPerformanceFeesToDAO = ZERO_BI;
   vault.accManagementFeesToStrategists = ZERO_BI;
   vault.accPerformanceFeesToStrategists = ZERO_BI;
-
   vault.depositsCount = 0;
   vault.rebalancesCount = 0;
   vault.redemptionsCount = 0;
 
-  // log.info("handleCreateVault ! 3", []);
+  // RoLes
+  const vaultRoLes = bindedFactory.getRolesPerVault(event.params.vault);
+  const admins = vaultRoLes.value1;
+  const strategists = vaultRoLes.value2;
+  const harvesters = vaultRoLes.value3;
+  // Tokens
+  const vaultState = bindedFactory.getVaultState(event.params.vault);
+  const tokensArray = new Array<Bytes>(vaultState.value0.length);
+  for (let x = 0; x < vaultState.value0.length; x++) tokensArray[x] = vaultState.value0[x].tokenAddress;
+  vault.tokens = tokensArray;
+  vault.constantProps = vaultState.value1;
+
+  // State
+  configProps: VaultConfigProps!
+  securityProps: VaultSecurityProps!
+  feesProps: VaultFeesProps!
+  historyProps: VaultHistoryProps!
+  balances: [BigInt!]!
+  positions: [BigInt!]!
+  tvl: BigInt!
+  sharePrice: BigInt!
+	# Fees - In shares
+  ongoingPerformanceFees: BigInt!
+  ongoingManagementFees: BigInt!
+
 
   vault.save();
+  return vault;
+}
 
-  // log.info("handleCreateVault ! 4", []);
-
+export function handleCreateVault(event: VaultCreated): void {
+  // Factory (created when the first vault is created)
+  let factory = Factory.load(FACTORY_ADDRESS);
+  if (factory === null) factory = _createFactory(event);
+  factory.vaultCount = factory.vaultCount + 1;
+  factory.save();
+  // Vault
+  const vault = _createVault(event, factory);
   VaultTemplate.create(event.params.vault);
-
-  // log.info("handleCreateVault ! 5", []);
-
+  vault.save();
   factory.save();
 }
 
@@ -68,17 +103,15 @@ export function buildVaultSnapshot(
   const vault = VaultContract.bind(vaultAddress);
   const entityName = FACTORY_ADDRESS + "-" + vaultAddress.toHexString() + "-" + block.number.toString();
   const status = vault.getVaultStatus();
-
-  /// assetsPrices + assets addresses + assetsBalances
   const tokensLength = vault.tokensLength().toI32();
   const assetsPrices = new Array<BigInt>(tokensLength);
-  const newTokens = new Array<Bytes>(tokensLength); // https://medium.com/protofire-blog/subgraph-development-part-2-handling-arrays-and-identifying-entities-30d63d4b1dc6
+  const newTokens = new Array<Bytes>(tokensLength);
 
   for (let y = 0; y < tokensLength; y++) {
     const asset = vault.tokens(BigInt.fromI32(y));
-    const price = vault.getLatestPrice(asset.value1); // value 0 = address of price feed
+    const price = vault.getLatestPrice(asset.value1);
     assetsPrices[y] = price;
-    newTokens[y] = asset.value0; // Token Address
+    newTokens[y] = asset.value0;
   }
 
   const assetsBalances = vault.getVaultBalances();
@@ -102,22 +135,22 @@ export function buildVaultSnapshot(
   snapshot.save();
 }
 
+/**
+ * New block handler
+ * @notice We snapshot only every 600 blocks (on the BSC due to 3 seconds per blocks
+ * @notice 3*600 = 1800 seconds = 30 min, and note that we can do 100 max requests without pagination)
+ * @param block Current Block
+ * @returns 
+ */
 export function handleNewBlock(block: ethereum.Block): void {
   const blockNumber = block.number;
   if (blockNumber.toI32() % 600 != 0) return;
-  // We snapshot only every 600 blocks (on the BSC due to 3 seconds per blocks
-  // 3*600 = 1800 seconds = 30 min, and note that we can do 100 max requests without pagination)
   const factory = Factory.load(FACTORY_ADDRESS);
   if (factory === null) return;
   const factoryContract = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS));
   const factoryState = factoryContract.getFactoryState();
   for (let x = 0; x < factoryState.value0.length; x++) {
     buildVaultSnapshot(factory, factoryState.value0[x], block, false);
+    // Update State ?
   }
 }
-
-/// Pro Tips
-
-/// As a side note, the toHex() and toHexString() methods — commonly used to generate IDs out of addresses or hashes —
-/// return a lowercase string. This means, when you query a subgraph for entities,
-/// the ID string provided should be lowercase as the query is case-sensitive.
