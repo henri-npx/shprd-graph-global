@@ -89,9 +89,9 @@ export const _updateVault = (vAddress: Address, vault: Vault, bindedFactory: Fac
 
   // Constant Props
   const constantProps = bindedVault.getConstantProps();
-  vault.factoryAddress = constantProps.factory.toHexString();
+  vault.factoryAddress = constantProps.factory;
   vault.createdAt = constantProps.createdAt;
-  vault.share = constantProps.share.toString();
+  vault.share = constantProps.share;
 
   // Fees Props
   const feesProps = bindedVault.getFeesProps();
@@ -129,7 +129,6 @@ export const _updateVault = (vAddress: Address, vault: Vault, bindedFactory: Fac
   vault.ongoingManagementFees = ongoingFees[0];
   vault.ongoingPerformanceFees = ongoingFees[1];
 
-  vault.shareTransferability = false;
 
   return vault;
 }
@@ -144,6 +143,8 @@ export function _createVault(event: VaultCreated, factory: Factory): Vault {
   vault.factory = factory.id;
   vault.vault = event.params.vault;
   vault.creator = event.transaction.from;
+  vault.shareTransferability = false;
+
   // vault.share = event.params.share;
   // const size = event.params.tokens.length;
   /// https://medium.com/protofire-blog/subgraph-development-part-2-handling-arrays-and-identifying-entities-30d63d4b1dc6
@@ -219,27 +220,27 @@ export function buildVaultSnapshot(
   snapshot.timestamp = block.timestamp;
   snapshot.triggeredByEvent = triggeredByEvent;
 
-  // TODO
-  // _updateVault ? 
-
   snapshot.save();
 }
 
 export function handleSetAccessManager(event: SetAccessManager): void {
   let factory = Factory.load(FACTORY_ADDRESS);
   if (factory === null) return; // Not possible
+  factory.accessManager = event.params.newAccessManager;
   factory.save();
 }
 
 export function handleSetFeesManager(event: SetFeesManager): void {
   let factory = Factory.load(FACTORY_ADDRESS);
   if (factory === null) return; // Not possible
+  factory.feesManager = event.params.newFeesManager;
   factory.save();
 }
 
 export function handleSetHarvester(event: SetHarvester): void {
   let factory = Factory.load(FACTORY_ADDRESS);
   if (factory === null) return; // Not possible
+  factory.harvester = event.params.newHarvester;
   factory.save();
 
 }
@@ -311,10 +312,10 @@ export function handleNewBlock(block: ethereum.Block): void {
   for (let x = 0; x < factoryState.value0.length; x++) {
     const vAddress = factoryState.value0[x]
     buildVaultSnapshot(factory, vAddress, block, false);
-    // Update State :
     let vault = Vault.load(vAddress.toString());
     let bindedVault = VaultContract.bind(vAddress);
-    // updateVault(vAddress, vault, factoryContract, bindedVault);
+    // TODO ?
+    // _updateVault(vAddress, vault, factoryContract, bindedVault);
   }
 
 }

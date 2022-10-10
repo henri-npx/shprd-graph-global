@@ -174,9 +174,9 @@ export function handleAddAsset(event: AddAssetEvent): void {
 export function handleSetShareTransferability(event: SetShareTransferability): void {
 	const vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
-	const bdVault = VaultContract.bind(event.address);
 	vault.shareTransferability = event.params.status;
 	vault.save();
+	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
 }
 
 export function handleSetSecurityProps(event: SetSecurityProps): void {
@@ -192,6 +192,7 @@ export function handleSetSecurityProps(event: SetSecurityProps): void {
 	vault.minSecurityTime = securityProps.minSecurityTime;
 	vault.minHarvestThreshold = securityProps.minHarvestThreshold;
 	vault.save();
+	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
 }
 
 export function handleSetConfigProps(event: SetConfigProps): void {
@@ -204,6 +205,7 @@ export function handleSetConfigProps(event: SetConfigProps): void {
 	vault.name = configProps.name;
 	vault.description = configProps.description;
 	vault.save();
+	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
 }
 
 export function handleSetFeesProps(event: SetFeesProps): void {
@@ -218,5 +220,6 @@ export function handleSetFeesProps(event: SetFeesProps): void {
 	vault.performanceFeesRate = feesProps.performanceFeesRate;
 	vault.performanceFeesToStrategist = feesProps.performanceFeesToStrategist;
 	vault.save();
+	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
 }
 

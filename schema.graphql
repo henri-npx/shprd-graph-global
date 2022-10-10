@@ -51,9 +51,9 @@ type Vault @entity {
 	tokensPriceFeedPrecision: [BigInt!]!
 	tokensDenominator: [BigInt!]!
 	# Constant Props Struct State
-	factoryAddress: String!
+	factoryAddress: Bytes!
 	createdAt: BigInt!
-	share: String!
+	share: Bytes!
 	# Config Props Struct State
 	paused: Boolean!
 	verified: Int!
