@@ -1,4 +1,13 @@
-# MAKE SURE TO MODIFY THE BLOCK COUNTER for SNAPSHOT TIME on each network
+# To update - On both dataSources
+
+# Network
+# Addres Factory
+# Add/Remove Tokenomics Section
+# StartBlock
+
+# ToDo ALL Inherited Events (roLes, etc)
+# Factory : transferOwnership
+# Vault: AccessControL Events
 
 specVersion: 0.0.4
 description: Shprd - The Asset Manager of Web3
@@ -7,11 +16,11 @@ schema:
 dataSources:
     - kind: ethereum/contract
       name: Factory
-      network: matic # TODO
+      network: matic # HERE
       source:
           abi: Factory
-          address: "0xc04eD88c05FcDe0f94305598eB14F1624b091A5c" # TODO
-          startBlock: 31140720 # TODO
+          address: "0xc04eD88c05FcDe0f94305598eB14F1624b091A5c" # HERE
+          startBlock: 31140720 # HERE
       mapping:
           kind: ethereum/events
           apiVersion: 0.0.6
@@ -43,42 +52,12 @@ dataSources:
                 handler: handleAddTokensAndPriceFeeds
               - event: RemoveTokensAndPriceFeeds(address[])
                 handler: handleRemoveTokensAndPriceFeeds
-              # ToDo ALL Inherited Events (roLes, etc)
           blockHandlers:
               - handler: handleNewBlock # OK
-    # ONLY ON BSC :
-    # - kind: ethereum/contract
-    #   name: RewardDistributor
-    #   network: bsc # TODO
-    #   source:
-    #       address: "0x4a795b4fe77841930044fc5a05fd98de59869133" # TODO
-    #       abi: RewardDistributor
-    #       startBlock: 17977696 # TODO
-    #   mapping:
-    #       kind: ethereum/events
-    #       apiVersion: 0.0.5
-    #       language: wasm/assemblyscript
-    #       file: ./src/mappings/distributor.ts
-    #       entities:
-    #           - RewardDistribution
-    #       abis:
-    #           - name: RewardDistributor
-    #             file: ./abis/RewardDistributor.json
-    #       eventHandlers:
-    #           - event: Claimed(uint256,address,uint256)
-    #             handler: handleClaimed
-    #           - event: NewDistributionPeriod(uint256,address,uint256)
-    #             handler: handleNewDistributionPeriod
-    #           - event: RewardLeftRecovered(uint256,uint256)
-    #             handler: handleRewardLeftRecovered
-    #           - event: Staked(address,uint256,uint256)
-    #             handler: handleStaked
-    #           - event: Unstaked(address,uint256,bool)
-    #             handler: handleUnstaked
 templates:
     - kind: ethereum/contract
       name: Vault
-      network: matic # TODO
+      network: matic # HERE
       source:
           abi: Vault
       mapping:

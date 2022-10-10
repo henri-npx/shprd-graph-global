@@ -21,8 +21,8 @@ type Vault @entity {
 	factory: Factory!
 	vault: Bytes! # address
 	creator: Bytes! # address
-	share: Bytes! # address
-	tokens: [Bytes!]! # address[]
+	# share: Bytes! # address
+	# tokens: [Bytes!]! # address[]
 	accManagementFeesToDAO: BigInt!
 	accPerformanceFeesToDAO: BigInt!
 	accManagementFeesToStrategists: BigInt!
@@ -42,72 +42,24 @@ type Vault @entity {
 	snapshots: [VaultSnapshot!]! @derivedFrom(field: "vault")
 
 	# RoLes
-	# TODO: Do we need to know the keccak256 of the role ?
 	admins: [Bytes!]! # address[]
 	strategists: [Bytes!]! # address[]
 	harvesters: [Bytes!]! # address[]
-	# Struct State
+	# Token Struct State
 	tokens: [Bytes!]!
-
-	constantProps: VaultConstantProps!
-	configProps: VaultConfigProps!
-	securityProps: VaultSecurityProps!
-	feesProps: VaultFeesProps!
-	historyProps: VaultHistoryProps!
-	balances: [BigInt!]!
-	positions: [BigInt!]!
-	tvl: BigInt!
-	sharePrice: BigInt!
-	# Fees - In shares
-	ongoingPerformanceFees: BigInt!
-	ongoingManagementFees: BigInt!
-}
-
-type VaultTokens @entity {
-	id: ID!
-	tokenAddress: Bytes! # address
-	priceFeedAddress: Bytes!
-	priceFeedPrecision: Int!
-	denominator: BigInt!
-}
-
-type VaultConstantProps @entity {
-	id: ID!
-	factory: Bytes!
+	tokensPriceFeedAddress: [Bytes!]!
+	tokensPriceFeedPrecision: [BigInt!]!
+	tokensDenominator: [BigInt!]!
+	# Constant Props Struct State
+	factoryAddress: String!
 	createdAt: BigInt!
-	share: Bytes!
-}
-
-type VaultHistoryProps @entity {
-	id: ID!
-	highWaterMark: BigInt!
-	prevRebalanceSignals: [BigInt!]!
-	prevSwap: BigInt!
-	prevMngHarvest: BigInt!
-}
-
-type VaultConfigProps @entity {
-	id: ID!
+	share: String!
+	# Config Props Struct State
 	paused: Boolean!
 	verified: Int!
-	name: Bytes!
-	description: Bytes!
-}
-
-# End of Added Section
-
-type VaultFeesProps @entity {
-	id: ID!
-	beneficiary: Bytes!
-	exitFees: BigInt
-	managementFeesRate: BigInt
-	managementFeesToStrategist: BigInt
-	performanceFeesRate: BigInt
-	performanceFeesToStrategist: BigInt
-}
-
-type VaultSecurityProps @entity {
-	id: ID!
+	name: String!
+	description: String!
+	# Security Props Struct State
 	maxAUM: BigInt!
 	maxLossSwap: BigInt!
 	minAmountDeposit: BigInt!
@@ -115,6 +67,28 @@ type VaultSecurityProps @entity {
 	minFrequencySwap: BigInt!
 	minSecurityTime: BigInt!
 	minHarvestThreshold: BigInt!
+	# Fees Props Struct State
+	beneficiary: Bytes!
+	exitFees: BigInt
+	managementFeesRate: BigInt
+	managementFeesToStrategist: BigInt
+	performanceFeesRate: BigInt
+	performanceFeesToStrategist: BigInt
+	# History Props Struct State
+	highWaterMark: BigInt!
+	prevRebalanceSignals: [BigInt!]!
+	prevSwap: BigInt!
+	prevMngHarvest: BigInt!
+
+	balances: [BigInt!]!
+	positions: [BigInt!]!
+	tvl: BigInt!
+	sharePrice: BigInt!
+	# Fees - In shares
+	ongoingPerformanceFees: BigInt!
+	ongoingManagementFees: BigInt!
+
+	shareTransferability: Boolean!
 }
 
 type VaultSnapshot @entity {
@@ -183,5 +157,10 @@ type HarvestPerformanceFees @entity {
 	from: Bytes!
 	amountToDAO: BigInt!
 	amountToStrategist: BigInt!
+	timestamp: BigInt!
+}
+
+type LastSnapshotTimestamp @entity {
+	id: ID!
 	timestamp: BigInt!
 }

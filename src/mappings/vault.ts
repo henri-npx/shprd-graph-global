@@ -20,6 +20,7 @@ import {
 } from "../types/Factory/Vault";
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { FACTORY_ADDRESS } from "./helpers";
+import { SetShareTransferability, SetSecurityProps, SetConfigProps, SetFeesProps } from '../types/templates/Vault/Vault';
 
 export function handleDeposit(event: DepositEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
@@ -133,6 +134,11 @@ export function handleHarvestPerformanceFees(event: HarvestPerformanceFeesEvent)
 	newPerformanceFeesHarvest.timestamp = event.block.timestamp;
 	vault.accPerformanceFeesToDAO = vault.accPerformanceFeesToDAO.plus(feesToDAO);
 	vault.accPerformanceFeesToStrategists = vault.accPerformanceFeesToStrategists.plus(feesToStrategist);
+
+	// ToDo
+	// ongoingPerformanceFees
+	// ongoingManagementFees
+
 	newPerformanceFeesHarvest.save();
 	vault.save();
 	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
@@ -162,3 +168,55 @@ export function handleAddAsset(event: AddAssetEvent): void {
 	entity.save();
 	buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
 }
+
+// Event Handlers that don't need to require to update the full state of the vault
+
+export function handleSetShareTransferability(event: SetShareTransferability): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	const bdVault = VaultContract.bind(event.address);
+	vault.shareTransferability = event.params.status;
+	vault.save();
+}
+
+export function handleSetSecurityProps(event: SetSecurityProps): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	const bdVault = VaultContract.bind(event.address);
+	const securityProps = bdVault.getSecurityProps();
+	vault.maxAUM = securityProps.maxAUM;
+	vault.maxLossSwap = securityProps.maxLossSwap;
+	vault.minAmountDeposit = securityProps.minAmountDeposit;
+	vault.maxAmountDeposit = securityProps.maxAmountDeposit;
+	vault.minFrequencySwap = securityProps.minFrequencySwap;
+	vault.minSecurityTime = securityProps.minSecurityTime;
+	vault.minHarvestThreshold = securityProps.minHarvestThreshold;
+	vault.save();
+}
+
+export function handleSetConfigProps(event: SetConfigProps): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	const bdVault = VaultContract.bind(event.address);
+	const configProps = bdVault.getConfigProps();
+	vault.paused = configProps.paused;
+	vault.verified = configProps.verified;
+	vault.name = configProps.name;
+	vault.description = configProps.description;
+	vault.save();
+}
+
+export function handleSetFeesProps(event: SetFeesProps): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	const bdVault = VaultContract.bind(event.address);
+	const feesProps = bdVault.getFeesProps();
+	vault.beneficiary = feesProps.beneficiary; // Strange
+	vault.exitFees = feesProps.exitFees;
+	vault.managementFeesRate = feesProps.managementFeesRate;
+	vault.managementFeesToStrategist = feesProps.managementFeesToStrategist;
+	vault.performanceFeesRate = feesProps.performanceFeesRate;
+	vault.performanceFeesToStrategist = feesProps.performanceFeesToStrategist;
+	vault.save();
+}
+
