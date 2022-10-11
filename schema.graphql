@@ -10,10 +10,10 @@ type Factory @entity {
 	swapRouter: Bytes!
 	swapProxy: Bytes!
 	swapAdapter: Bytes!
-}
 
-type FactoryState @entity {
-	id: ID!
+	# Snapshots
+	lastSnapshotBlockTimestamp: BigInt!
+	lastSnapshotBlockNumber: BigInt!
 }
 
 type Vault @entity {
@@ -157,10 +157,5 @@ type HarvestPerformanceFees @entity {
 	from: Bytes!
 	amountToDAO: BigInt!
 	amountToStrategist: BigInt!
-	timestamp: BigInt!
-}
-
-type LastSnapshotTimestamp @entity {
-	id: ID!
 	timestamp: BigInt!
 }

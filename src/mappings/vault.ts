@@ -7,7 +7,8 @@ import {
 	HarvestPerformanceFees,
 	HarvestManagementFees,
 } from "../types/schema";
-import { buildVaultSnapshot } from "./factory";
+
+import { newSnapshot, updateVault } from "./factory";
 
 import {
 	Vault as VaultContract,
@@ -17,7 +18,11 @@ import {
 	HarvestManagementFees as HarvestManagementFeesEvent,
 	HarvestPerformanceFees as HarvestPerformanceFeesEvent,
 	AddAsset as AddAssetEvent,
+	RoleAdminChanged,
+	RoleGranted,
+	RoleRevoked,
 } from "../types/Factory/Vault";
+
 import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { FACTORY_ADDRESS } from "./helpers";
 import { SetShareTransferability, SetSecurityProps, SetConfigProps, SetFeesProps } from '../types/templates/Vault/Vault';
@@ -25,7 +30,6 @@ import { SetShareTransferability, SetSecurityProps, SetConfigProps, SetFeesProps
 export function handleDeposit(event: DepositEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-
 	let vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
 	const deposit = new Deposit(event.transaction.hash.toHexString()) as Deposit;
@@ -42,13 +46,13 @@ export function handleDeposit(event: DepositEvent): void {
 	deposit.save();
 	vault.depositsCount = vault.depositsCount + 1;
 	vault.save();
-	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleRebalance(event: RebalanceEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-
 	let vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
 	const newRebalance = new Rebalance(event.transaction.hash.toHexString()) as Rebalance;
@@ -57,18 +61,17 @@ export function handleRebalance(event: RebalanceEvent): void {
 	newRebalance.currentSignals = event.params.currentSignals;
 	newRebalance.desiredSignals = event.params.desiredSignals;
 	newRebalance.timestamp = event.block.timestamp;
-
 	// Storage Reads
 	const vaultContract = VaultContract.bind(event.address);
 	const vaultStatusAfter = vaultContract.getVaultStatus();
 	newRebalance.recordedSignals = vaultStatusAfter.value0;
 	newRebalance.sharePriceAfter = vaultStatusAfter.value2;
-
 	// Save
 	newRebalance.save();
 	vault.rebalancesCount = vault.rebalancesCount + 1;
 	vault.save();
-	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 // How to compute exit fees ?
@@ -76,7 +79,6 @@ export function handleRebalance(event: RebalanceEvent): void {
 export function handleRedeem(event: RedeemEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-
 	let vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
 	const newRedeem = new Redeem(event.transaction.hash.toHexString()) as Redeem;
@@ -85,22 +87,20 @@ export function handleRedeem(event: RedeemEvent): void {
 	newRedeem.shareBurned = event.params.shareBurned;
 	newRedeem.amountReceived = event.params.amountReceived;
 	newRedeem.timestamp = event.block.timestamp;
-
 	// Storage Reads
 	const vaultContract = VaultContract.bind(event.address);
 	const vaultStatusAfter = vaultContract.getVaultStatus();
 	newRedeem.sharePriceAfter = vaultStatusAfter.value2;
-
 	newRedeem.save();
 	vault.redemptionsCount = vault.redemptionsCount + 1;
 	vault.save();
-	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleHarvestManagementFees(event: HarvestManagementFeesEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-
 	let vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
 	const newManagementFeesHarvest = new HarvestManagementFees(event.transaction.hash.toHexString());
@@ -115,13 +115,13 @@ export function handleHarvestManagementFees(event: HarvestManagementFeesEvent): 
 	vault.accManagementFeesToStrategists = vault.accManagementFeesToStrategists.plus(feesToStrategist);
 	newManagementFeesHarvest.save();
 	vault.save();
-	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleHarvestPerformanceFees(event: HarvestPerformanceFeesEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-
 	let vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
 	const feesToDAO = event.params.amountToDAO;
@@ -134,14 +134,11 @@ export function handleHarvestPerformanceFees(event: HarvestPerformanceFeesEvent)
 	newPerformanceFeesHarvest.timestamp = event.block.timestamp;
 	vault.accPerformanceFeesToDAO = vault.accPerformanceFeesToDAO.plus(feesToDAO);
 	vault.accPerformanceFeesToStrategists = vault.accPerformanceFeesToStrategists.plus(feesToStrategist);
-
-	// ToDo
-	// ongoingPerformanceFees
-	// ongoingManagementFees
-
+	// ongoingPerformanceFees and ongoingManagementFees are updated in the updateVault
 	newPerformanceFeesHarvest.save();
 	vault.save();
-	buildVaultSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 
@@ -154,8 +151,8 @@ export function handleHarvestPerformanceFees(event: HarvestPerformanceFeesEvent)
 export function handleAddAsset(event: AddAssetEvent): void {
 	const factory = Factory.load(FACTORY_ADDRESS);
 	if (factory === null) return;
-	const entity = Vault.load(event.address.toHexString());
-	if (entity == null) return;
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
 	const storage = VaultContract.bind(Address.fromString(event.address.toHexString()));
 	const tokensLength = storage.tokensLength().toI32();
 	// At this point, the new token is added so length is true
@@ -164,9 +161,10 @@ export function handleAddAsset(event: AddAssetEvent): void {
 		const token = storage.tokens(BigInt.fromI32(x));
 		newTokens[x] = token.value0; // Token Address
 	}
-	entity.tokens = newTokens;
-	entity.save();
-	buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	vault.tokens = newTokens;
+	vault.save();
+	// newSnapshot(factory, Address.fromString(vault.id), event.block, true);
+	updateVault(vault);
 }
 
 // Event Handlers that don't need to require to update the full state of the vault
@@ -176,7 +174,8 @@ export function handleSetShareTransferability(event: SetShareTransferability): v
 	if (vault == null) return;
 	vault.shareTransferability = event.params.status;
 	vault.save();
-	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	// newSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleSetSecurityProps(event: SetSecurityProps): void {
@@ -192,7 +191,8 @@ export function handleSetSecurityProps(event: SetSecurityProps): void {
 	vault.minSecurityTime = securityProps.minSecurityTime;
 	vault.minHarvestThreshold = securityProps.minHarvestThreshold;
 	vault.save();
-	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	// newSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleSetConfigProps(event: SetConfigProps): void {
@@ -206,6 +206,7 @@ export function handleSetConfigProps(event: SetConfigProps): void {
 	vault.description = configProps.description;
 	vault.save();
 	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	updateVault(vault);
 }
 
 export function handleSetFeesProps(event: SetFeesProps): void {
@@ -221,5 +222,24 @@ export function handleSetFeesProps(event: SetFeesProps): void {
 	vault.performanceFeesToStrategist = feesProps.performanceFeesToStrategist;
 	vault.save();
 	// buildVaultSnapshot(factory, Address.fromString(entity.id), event.block, true);
+	updateVault(vault);
+}
+
+export function handleRoleAdminChanged(event: RoleAdminChanged): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	updateVault(vault);
+}
+
+export function handleRoleGranted(event: RoleGranted): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	updateVault(vault);
+}
+
+export function handleRoleRevoked(event: RoleRevoked): void {
+	const vault = Vault.load(event.address.toHexString());
+	if (vault == null) return;
+	updateVault(vault);
 }
 
