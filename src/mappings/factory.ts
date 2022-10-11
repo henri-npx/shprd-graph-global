@@ -346,7 +346,7 @@ export function handleNewBlock(block: ethereum.Block): void {
     log.debug("handleNewBlock : No Factory yet", []);
     return;
   }
-  if (snapshotOrNot(block) == true) return;
+  if (!snapshotOrNot(block) == false) return;
   const factoryStorage = FactoryContract.bind(Address.fromString(FACTORY_ADDRESS));
   const factoryState = factoryStorage.getFactoryState();
   const vaults = factoryState.value0;

@@ -23,7 +23,7 @@ import {
 	RoleRevoked,
 } from "../types/Factory/Vault";
 
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
 import { FACTORY_ADDRESS } from "./helpers";
 import { SetShareTransferability, SetSecurityProps, SetConfigProps, SetFeesProps } from '../types/templates/Vault/Vault';
 
@@ -228,18 +228,21 @@ export function handleSetFeesProps(event: SetFeesProps): void {
 export function handleRoleAdminChanged(event: RoleAdminChanged): void {
 	const vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
+	log.debug("handleRoleAdminChanged", [])
 	updateVault(vault);
 }
 
 export function handleRoleGranted(event: RoleGranted): void {
 	const vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
+	log.debug("handleRoleGranted", [])
 	updateVault(vault);
 }
 
 export function handleRoleRevoked(event: RoleRevoked): void {
 	const vault = Vault.load(event.address.toHexString());
 	if (vault == null) return;
+	log.debug("handleRoleRevoked", [])
 	updateVault(vault);
 }
 
